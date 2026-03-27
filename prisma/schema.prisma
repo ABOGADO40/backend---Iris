@@ -1,0 +1,550 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Role {
+  id                   Int              @id @default(autoincrement())
+  name                 String           @unique @db.VarChar(50)
+  description          String?          @db.VarChar(200)
+  isActive             Boolean          @default(true) @map("is_active")
+  userIdRegistration   Int?             @map("user_id_registration")
+  dateTimeRegistration DateTime         @default(now()) @map("date_time_registration") @db.Timestamptz(6)
+  userIdModification   Int?             @map("user_id_modification")
+  dateTimeModification DateTime?        @map("date_time_modification") @db.Timestamptz(6)
+  rolesPermissions     RolePermission[]
+  users                User[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id                   Int              @id @default(autoincrement())
+  code                 String           @unique @db.VarChar(80)
+  name                 String           @db.VarChar(100)
+  description          String?          @db.VarChar(200)
+  type                 String?          @db.VarChar(30)
+  resource             String?          @db.VarChar(100)
+  isActive             Boolean          @default(true) @map("is_active")
+  userIdRegistration   Int?             @map("user_id_registration")
+  dateTimeRegistration DateTime         @default(now()) @map("date_time_registration") @db.Timestamptz(6)
+  userIdModification   Int?             @map("user_id_modification")
+  dateTimeModification DateTime?        @map("date_time_modification") @db.Timestamptz(6)
+  rolesPermissions     RolePermission[]
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  id                   Int        @id @default(autoincrement())
+  roleId               Int        @map("role_id")
+  permissionId         Int        @map("permission_id")
+  isActive             Boolean    @default(true) @map("is_active")
+  userIdRegistration   Int?       @map("user_id_registration")
+  dateTimeRegistration DateTime   @default(now()) @map("date_time_registration") @db.Timestamptz(6)
+  userIdModification   Int?       @map("user_id_modification")
+  dateTimeModification DateTime?  @map("date_time_modification") @db.Timestamptz(6)
+  permission           Permission @relation(fields: [permissionId], references: [id])
+  role                 Role       @relation(fields: [roleId], references: [id])
+
+  @@unique([roleId, permissionId])
+  @@map("roles_permissions")
+}
+
+model User {
+  id                   Int                 @id @default(autoincrement())
+  roleId               Int                 @map("role_id")
+  email                String              @unique @db.VarChar(160)
+  passwordHash         String              @map("password_hash") @db.VarChar(255)
+  fullName             String?             @map("full_name") @db.VarChar(160)
+  isActive             Boolean             @default(true) @map("is_active")
+  userIdRegistration   Int?                @map("user_id_registration")
+  dateTimeRegistration DateTime            @default(now()) @map("date_time_registration") @db.Timestamptz(6)
+  userIdModification   Int?                @map("user_id_modification")
+  dateTimeModification DateTime?           @map("date_time_modification") @db.Timestamptz(6)
+  emailVerified        Boolean             @default(false) @map("email_verified")
+  analysisRequests     AnalysisRequest[]
+  auditLogs            AuditLog[]
+  cases                Case[]
+  emailVerifications   EmailVerification[]
+  evidences            Evidence[]
+  sessions             Session[]
+  tags                 Tag[]
+  tokenUsages          TokenUsage[]
+  role                 Role                @relation(fields: [roleId], references: [id])
+
+  @@map("users")
+}
+
+model Session {
+  id                   Int       @id @default(autoincrement())
+  userId               Int       @map("user_id")
+  tokenHash            String    @map("token_hash") @db.VarChar(255)
+  expiresAt            DateTime  @map("expires_at") @db.Timestamptz(6)
+  revokedAt            DateTime? @map("revoked_at") @db.Timestamptz(6)
+  ipAddress            String?   @map("ip_address") @db.VarChar(45)
+  userAgent            String?   @map("user_agent")
+  userIdRegistration   Int?      @map("user_id_registration")
+  dateTimeRegistration DateTime  @default(now()) @map("date_time_registration") @db.Timestamptz(6)
+  userIdModification   Int?      @map("user_id_modification")
+  dateTimeModification DateTime? @map("date_time_modification") @db.Timestamptz(6)
+  user                 User      @relation(fields: [userId], references: [id])
+
+  @@map("sessions")
+}
+
+model Case {
+  id                   Int               @id @default(autoincrement())
+  ownerUserId          Int               @map("owner_user_id")
+  title                String            @db.VarChar(200)
+  description          String?
+  caseDate             DateTime          @map("case_date") @db.Date
+  userIdRegistration   Int?              @map("user_id_registration")
+  dateTimeRegistration DateTime          @default(now()) @map("date_time_registration") @db.Timestamptz(6)
+  userIdModification   Int?              @map("user_id_modification")
+  dateTimeModification DateTime?         @map("date_time_modification") @db.Timestamptz(6)
+  descriptionFilePath  String?           @map("description_file_path") @db.VarChar(500)
+  descriptionFileName  String?           @map("description_file_name") @db.VarChar(255)
+  descriptionFileMime  String?           @map("description_file_mime") @db.VarChar(120)
+  descriptionFileSize  BigInt?           @map("description_file_size")
+  status               String            @default("ACTIVE") @db.VarChar(20)
+  analysisRequests     AnalysisRequest[]
+  caseEvidences        CaseEvidence[]
+  caseTags             CaseTag[]
+  owner                User              @relation(fields: [ownerUserId], references: [id])
+  tokenUsages          TokenUsage[]
+
+  @@index([status], map: "idx_cases_status")
+  @@map("cases")
+}
+
+model Evidence {
+  id                   Int               @id @default(autoincrement())
+  ownerUserId          Int               @map("owner_user_id")
+  evidenceType         String            @map("evidence_type") @db.VarChar(10)
+  title                String?           @db.VarChar(200)
+  tipoEvidencia        String?           @map("tipo_evidencia") @db.VarChar(120)
+  notes                String?
+  userIdRegistration   Int?              @map("user_id_registration")
+  dateTimeRegistration DateTime          @default(now()) @map("date_time_registration") @db.Timestamptz(6)
+  userIdModification   Int?              @map("user_id_modification")
+  dateTimeModification DateTime?         @map("date_time_modification") @db.Timestamptz(6)
+  analysisRequestsB    AnalysisRequest[] @relation("EvidenceB")
+  analysisRequests     AnalysisRequest[] @relation("EvidenceA")
+  caseEvidences        CaseEvidence[]
+  evidenceFile         EvidenceFile?
+  evidenceTags         EvidenceTag[]
+  evidenceText         EvidenceText?
+  owner                User              @relation(fields: [ownerUserId], references: [id])
+  whatsappChat         WhatsappChat?
+
+  @@map("evidences")
+}
+
+model CaseEvidence {
+  id                   Int       @id @default(autoincrement())
+  caseId               Int       @map("case_id")
+  evidenceId           Int       @map("evidence_id")
+  userIdRegistration   Int?      @map("user_id_registration")
+  dateTimeRegistration DateTime  @default(now()) @map("date_time_registration") @db.Timestamptz(6)
+  userIdModification   Int?      @map("user_id_modification")
+  dateTimeModification DateTime? @map("date_time_modification") @db.Timestamptz(6)
+  case                 Case      @relation(fields: [caseId], references: [id])
+  evidence             Evidence  @relation(fields: [evidenceId], references: [id])
+
+  @@unique([caseId, evidenceId])
+  @@map("case_evidences")
+}
+
+model EvidenceFile {
+  id                   Int                @id @default(autoincrement())
+  evidenceId           Int                @unique @map("evidence_id")
+  originalFilename     String             @map("original_filename") @db.VarChar(255)
+  mimeType             String?            @map("mime_type") @db.VarChar(120)
+  sizeBytes            BigInt             @map("size_bytes")
+  storagePath          String             @map("storage_path")
+  checksumSha256       String?            @map("checksum_sha256") @db.VarChar(64)
+  userIdRegistration   Int?               @map("user_id_registration")
+  dateTimeRegistration DateTime           @default(now()) @map("date_time_registration") @db.Timestamptz(6)
+  userIdModification   Int?               @map("user_id_modification")
+  dateTimeModification DateTime?          @map("date_time_modification") @db.Timestamptz(6)
+  isProcessed          Boolean?           @default(false) @map("is_processed")
+  contentType          String?            @map("content_type") @db.VarChar(100)
+  evidence             Evidence           @relation(fields: [evidenceId], references: [id])
+  processedDocument    ProcessedDocument?
+  transcription        Transcription?
+  videoFrames          VideoFrame[]
+
+  @@map("evidence_files")
+}
+
+model EvidenceText {
+  id                   Int       @id @default(autoincrement())
+  evidenceId           Int       @unique @map("evidence_id")
+  textContent          String    @map("text_content")
+  userIdRegistration   Int?      @map("user_id_registration")
+  dateTimeRegistration DateTime  @default(now()) @map("date_time_registration") @db.Timestamptz(6)
+  userIdModification   Int?      @map("user_id_modification")
+  dateTimeModification DateTime? @map("date_time_modification") @db.Timestamptz(6)
+  evidence             Evidence  @relation(fields: [evidenceId], references: [id])
+
+  @@map("evidence_texts")
+}
+
+model AnalysisRequest {
+  id                   Int               @id @default(autoincrement())
+  requesterUserId      Int               @map("requester_user_id")
+  serviceType          String            @map("service_type") @db.VarChar(30)
+  evidenceId           Int?              @map("evidence_id")
+  caseId               Int?              @map("case_id")
+  evidenceIdB          Int?              @map("evidence_id_b")
+  inputFreeText        String?           @map("input_free_text")
+  status               String            @default("PENDING") @db.VarChar(20)
+  errorMessage         String?           @map("error_message")
+  aiProvider           String?           @map("ai_provider") @db.VarChar(60)
+  aiModel              String?           @map("ai_model") @db.VarChar(80)
+  userIdRegistration   Int?              @map("user_id_registration")
+  dateTimeRegistration DateTime          @default(now()) @map("date_time_registration") @db.Timestamptz(6)
+  userIdModification   Int?              @map("user_id_modification")
+  dateTimeModification DateTime?         @map("date_time_modification") @db.Timestamptz(6)
+  isSaved              Boolean?          @default(false) @map("is_saved")
+  title                String?           @db.VarChar(200)
+  inputTokens          Int?              @default(0) @map("input_tokens")
+  outputTokens         Int?              @default(0) @map("output_tokens")
+  totalTokens          Int?              @default(0) @map("total_tokens")
+  estimatedCost        Decimal?          @default(0) @map("estimated_cost") @db.Decimal(10, 6)
+  analysisMessages     AnalysisMessage[]
+  case                 Case?             @relation(fields: [caseId], references: [id])
+  evidenceB            Evidence?         @relation("EvidenceB", fields: [evidenceIdB], references: [id])
+  evidence             Evidence?         @relation("EvidenceA", fields: [evidenceId], references: [id])
+  requester            User              @relation(fields: [requesterUserId], references: [id])
+  analysisResult       AnalysisResult?
+  tokenUsages          TokenUsage[]
+
+  @@index([evidenceId], map: "idx_analysis_requests_evidence")
+  @@index([isSaved], map: "idx_analysis_requests_saved")
+  @@map("analysis_requests")
+}
+
+model AnalysisResult {
+  id                   Int             @id @default(autoincrement())
+  analysisRequestId    Int             @unique @map("analysis_request_id")
+  resultText           String          @map("result_text")
+  resultStructuredJson Json?           @map("result_structured_json")
+  disclaimerIncluded   Boolean         @default(true) @map("disclaimer_included")
+  userIdRegistration   Int?            @map("user_id_registration")
+  dateTimeRegistration DateTime        @default(now()) @map("date_time_registration") @db.Timestamptz(6)
+  userIdModification   Int?            @map("user_id_modification")
+  dateTimeModification DateTime?       @map("date_time_modification") @db.Timestamptz(6)
+  analysisRequest      AnalysisRequest @relation(fields: [analysisRequestId], references: [id])
+  exports              Export[]
+
+  @@map("analysis_results")
+}
+
+model Tag {
+  id                   Int           @id @default(autoincrement())
+  ownerUserId          Int           @map("owner_user_id")
+  name                 String        @db.VarChar(60)
+  color                String?       @db.VarChar(7)
+  userIdRegistration   Int?          @map("user_id_registration")
+  dateTimeRegistration DateTime      @default(now()) @map("date_time_registration") @db.Timestamptz(6)
+  userIdModification   Int?          @map("user_id_modification")
+  dateTimeModification DateTime?     @map("date_time_modification") @db.Timestamptz(6)
+  caseTags             CaseTag[]
+  evidenceTags         EvidenceTag[]
+  owner                User          @relation(fields: [ownerUserId], references: [id])
+
+  @@unique([ownerUserId, name])
+  @@map("tags")
+}
+
+model CaseTag {
+  id                   Int       @id @default(autoincrement())
+  caseId               Int       @map("case_id")
+  tagId                Int       @map("tag_id")
+  userIdRegistration   Int?      @map("user_id_registration")
+  dateTimeRegistration DateTime  @default(now()) @map("date_time_registration") @db.Timestamptz(6)
+  userIdModification   Int?      @map("user_id_modification")
+  dateTimeModification DateTime? @map("date_time_modification") @db.Timestamptz(6)
+  case                 Case      @relation(fields: [caseId], references: [id])
+  tag                  Tag       @relation(fields: [tagId], references: [id])
+
+  @@unique([caseId, tagId])
+  @@map("case_tags")
+}
+
+model EvidenceTag {
+  id                   Int       @id @default(autoincrement())
+  evidenceId           Int       @map("evidence_id")
+  tagId                Int       @map("tag_id")
+  userIdRegistration   Int?      @map("user_id_registration")
+  dateTimeRegistration DateTime  @default(now()) @map("date_time_registration") @db.Timestamptz(6)
+  userIdModification   Int?      @map("user_id_modification")
+  dateTimeModification DateTime? @map("date_time_modification") @db.Timestamptz(6)
+  evidence             Evidence  @relation(fields: [evidenceId], references: [id])
+  tag                  Tag       @relation(fields: [tagId], references: [id])
+
+  @@unique([evidenceId, tagId])
+  @@map("evidence_tags")
+}
+
+model Export {
+  id                   Int            @id @default(autoincrement())
+  analysisResultId     Int            @map("analysis_result_id")
+  format               String         @db.VarChar(10)
+  storagePath          String         @map("storage_path")
+  fileSizeBytes        BigInt?        @map("file_size_bytes")
+  downloadCount        Int            @default(0) @map("download_count")
+  userIdRegistration   Int?           @map("user_id_registration")
+  dateTimeRegistration DateTime       @default(now()) @map("date_time_registration") @db.Timestamptz(6)
+  userIdModification   Int?           @map("user_id_modification")
+  dateTimeModification DateTime?      @map("date_time_modification") @db.Timestamptz(6)
+  analysisResult       AnalysisResult @relation(fields: [analysisResultId], references: [id])
+
+  @@map("exports")
+}
+
+model AuditLog {
+  id                   Int       @id @default(autoincrement())
+  actorUserId          Int?      @map("actor_user_id")
+  actionCode           String    @map("action_code") @db.VarChar(80)
+  entityType           String?   @map("entity_type") @db.VarChar(50)
+  entityId             Int?      @map("entity_id")
+  details              Json?
+  ipAddress            String?   @map("ip_address") @db.VarChar(45)
+  userAgent            String?   @map("user_agent")
+  userIdRegistration   Int?      @map("user_id_registration")
+  dateTimeRegistration DateTime  @default(now()) @map("date_time_registration") @db.Timestamptz(6)
+  userIdModification   Int?      @map("user_id_modification")
+  dateTimeModification DateTime? @map("date_time_modification") @db.Timestamptz(6)
+  actorUser            User?     @relation(fields: [actorUserId], references: [id])
+
+  @@index([actorUserId])
+  @@index([actionCode])
+  @@index([entityType, entityId])
+  @@index([dateTimeRegistration])
+  @@map("audit_log")
+}
+
+model ai_service_configs {
+  id                     Int                @id @default(autoincrement())
+  service_type           String             @unique @db.VarChar(30)
+  service_name           String             @db.VarChar(100)
+  service_description    String?            @db.VarChar(300)
+  api_key_encrypted      String?            @db.VarChar(500)
+  api_url                String?            @default("https://api.openai.com/v1/chat/completions") @db.VarChar(500)
+  ai_model               String?            @default("gpt-4o") @db.VarChar(80)
+  max_tokens             Int?               @default(4096)
+  temperature            Decimal?           @default(0.7) @db.Decimal(3, 2)
+  is_active              Boolean?           @default(false)
+  prompt_id              String?            @db.VarChar(100)
+  prompt_version         String?            @default("1") @db.VarChar(10)
+  use_responses_api      Boolean?           @default(false)
+  user_id_registration   Int?
+  date_time_registration DateTime?          @default(now()) @db.Timestamptz(6)
+  user_id_modification   Int?
+  date_time_modification DateTime?          @db.Timestamptz(6)
+  aiConfigVariables      AiConfigVariable[]
+
+  @@index([is_active], map: "idx_ai_service_configs_active")
+  @@index([prompt_id], map: "idx_ai_service_configs_prompt")
+  @@index([service_type], map: "idx_ai_service_configs_type")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model AnalysisMessage {
+  id                   Int             @id @default(autoincrement())
+  analysisRequestId    Int             @map("analysis_request_id")
+  role                 String          @db.VarChar(20)
+  content              String
+  userIdRegistration   Int?            @map("user_id_registration")
+  dateTimeRegistration DateTime?       @default(now()) @map("date_time_registration") @db.Timestamptz(6)
+  analysisRequest      AnalysisRequest @relation(fields: [analysisRequestId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([dateTimeRegistration], map: "idx_analysis_messages_date")
+  @@index([analysisRequestId], map: "idx_analysis_messages_request")
+  @@index([analysisRequestId], map: "idx_analysis_messages_request_id")
+  @@map("analysis_messages")
+}
+
+model ProcessedDocument {
+  id                   Int              @id @default(autoincrement())
+  evidenceFileId       Int              @unique @map("evidence_file_id")
+  extractedText        String?          @map("extracted_text")
+  processingStatus     String           @default("PENDING") @map("processing_status") @db.VarChar(20)
+  errorMessage         String?          @map("error_message")
+  metadata             Json?            @default("{}")
+  processingTimeMs     Int?             @map("processing_time_ms")
+  ocrConfidence        Decimal?         @map("ocr_confidence") @db.Decimal(5, 2)
+  wordCount            Int?             @map("word_count")
+  pageCount            Int?             @map("page_count")
+  hasImages            Boolean?         @default(false) @map("has_images")
+  dateTimeRegistration DateTime         @default(now()) @map("date_time_registration") @db.Timestamptz(6)
+  dateTimeUpdated      DateTime?        @default(now()) @map("date_time_updated") @db.Timestamptz(6)
+  extractedImages      ExtractedImage[]
+  evidenceFile         EvidenceFile     @relation(fields: [evidenceFileId], references: [id], onDelete: Cascade)
+
+  @@index([processingStatus], map: "idx_processed_documents_status")
+  @@index([evidenceFileId], map: "idx_processed_documents_evidence")
+  @@map("processed_documents")
+}
+
+model ExtractedImage {
+  id                   Int               @id @default(autoincrement())
+  processedDocumentId  Int               @map("processed_document_id")
+  imageBase64          String?           @map("image_base64")
+  mimeType             String?           @map("mime_type") @db.VarChar(50)
+  pageNumber           Int?              @map("page_number")
+  imageIndex           Int?              @map("image_index")
+  ocrText              String?           @map("ocr_text")
+  ocrConfidence        Decimal?          @map("ocr_confidence") @db.Decimal(5, 2)
+  width                Int?
+  height               Int?
+  fileSizeBytes        Int?              @map("file_size_bytes")
+  dateTimeRegistration DateTime          @default(now()) @map("date_time_registration") @db.Timestamptz(6)
+  processedDocument    ProcessedDocument @relation(fields: [processedDocumentId], references: [id], onDelete: Cascade)
+
+  @@index([processedDocumentId], map: "idx_extracted_images_document")
+  @@map("extracted_images")
+}
+
+model WhatsappChat {
+  id                   Int               @id @default(autoincrement())
+  evidenceId           Int               @unique @map("evidence_id")
+  chatType             String?           @map("chat_type") @db.VarChar(20)
+  participants         Json?             @default("[]")
+  totalMessages        Int?              @default(0) @map("total_messages")
+  dateRangeStart       DateTime?         @map("date_range_start") @db.Timestamptz(6)
+  dateRangeEnd         DateTime?         @map("date_range_end") @db.Timestamptz(6)
+  storagePath          String?           @map("storage_path") @db.VarChar(500)
+  hasMedia             Boolean?          @default(false) @map("has_media")
+  mediaCount           Int?              @default(0) @map("media_count")
+  formattedText        String?           @map("formatted_text")
+  processingStatus     String?           @default("PENDING") @map("processing_status") @db.VarChar(20)
+  errorMessage         String?           @map("error_message")
+  dateTimeRegistration DateTime          @default(now()) @map("date_time_registration") @db.Timestamptz(6)
+  dateTimeUpdated      DateTime?         @default(now()) @map("date_time_updated") @db.Timestamptz(6)
+  evidence             Evidence          @relation(fields: [evidenceId], references: [id], onDelete: Cascade)
+  messages             WhatsappMessage[]
+
+  @@index([evidenceId], map: "idx_whatsapp_chats_evidence")
+  @@index([processingStatus], map: "idx_whatsapp_chats_status")
+  @@map("whatsapp_chats")
+}
+
+model WhatsappMessage {
+  id                   Int          @id @default(autoincrement())
+  whatsappChatId       Int          @map("whatsapp_chat_id")
+  sender               String?      @db.VarChar(255)
+  messageText          String?      @map("message_text")
+  messageTimestamp     DateTime?    @map("message_timestamp") @db.Timestamptz(6)
+  hasMedia             Boolean?     @default(false) @map("has_media")
+  mediaType            String?      @map("media_type") @db.VarChar(50)
+  mediaPath            String?      @map("media_path") @db.VarChar(500)
+  messageIndex         Int?         @map("message_index")
+  dateTimeRegistration DateTime     @default(now()) @map("date_time_registration") @db.Timestamptz(6)
+  whatsappChat         WhatsappChat @relation(fields: [whatsappChatId], references: [id], onDelete: Cascade)
+
+  @@index([whatsappChatId], map: "idx_whatsapp_messages_chat")
+  @@index([sender], map: "idx_whatsapp_messages_sender")
+  @@index([messageTimestamp], map: "idx_whatsapp_messages_timestamp")
+  @@map("whatsapp_messages")
+}
+
+model Transcription {
+  id                    Int          @id @default(autoincrement())
+  evidenceFileId        Int          @unique @map("evidence_file_id")
+  transcriptionText     String?      @map("transcription_text")
+  transcriptionLanguage String?      @map("transcription_language") @db.VarChar(10)
+  durationSeconds       Int?         @map("duration_seconds")
+  processingStatus      String       @default("PENDING") @map("processing_status") @db.VarChar(20)
+  whisperModel          String?      @default("whisper-1") @map("whisper_model") @db.VarChar(50)
+  hasTimestamps         Boolean?     @default(false) @map("has_timestamps")
+  timestampsJson        Json?        @map("timestamps_json")
+  errorMessage          String?      @map("error_message")
+  costUsd               Decimal?     @map("cost_usd") @db.Decimal(10, 4)
+  userIdRegistration    Int?         @map("user_id_registration")
+  dateTimeRegistration  DateTime     @default(now()) @map("date_time_registration") @db.Timestamptz(6)
+  userIdModification    Int?         @map("user_id_modification")
+  dateTimeModification  DateTime?    @map("date_time_modification") @db.Timestamptz(6)
+  evidenceFile          EvidenceFile @relation(fields: [evidenceFileId], references: [id], onDelete: Cascade)
+
+  @@index([processingStatus], map: "idx_transcriptions_status")
+  @@index([evidenceFileId], map: "idx_transcriptions_evidence")
+  @@map("transcriptions")
+}
+
+model VideoFrame {
+  id                   Int          @id @default(autoincrement())
+  evidenceFileId       Int          @map("evidence_file_id")
+  frameNumber          Int?         @map("frame_number")
+  timestampSeconds     Decimal?     @map("timestamp_seconds") @db.Decimal(10, 3)
+  imageBase64          String?      @map("image_base64")
+  visionAnalysis       String?      @map("vision_analysis")
+  userIdRegistration   Int?         @map("user_id_registration")
+  dateTimeRegistration DateTime     @default(now()) @map("date_time_registration") @db.Timestamptz(6)
+  evidenceFile         EvidenceFile @relation(fields: [evidenceFileId], references: [id], onDelete: Cascade)
+
+  @@index([evidenceFileId], map: "idx_video_frames_evidence")
+  @@index([timestampSeconds], map: "idx_video_frames_timestamp")
+  @@map("video_frames")
+}
+
+model EmailVerification {
+  id                   Int       @id @default(autoincrement())
+  userId               Int       @map("user_id")
+  pin                  String    @db.VarChar(6)
+  expiresAt            DateTime  @map("expires_at") @db.Timestamptz(6)
+  usedAt               DateTime? @map("used_at") @db.Timestamptz(6)
+  attempts             Int       @default(0)
+  dateTimeRegistration DateTime  @default(now()) @map("date_time_registration") @db.Timestamptz(6)
+  user                 User      @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([userId], map: "idx_email_verifications_user_id")
+  @@map("email_verifications")
+}
+
+model AiConfigVariable {
+  id              Int                @id @default(autoincrement())
+  serviceType     String             @map("service_type") @db.VarChar(30)
+  internalKey     String             @map("internal_key") @db.VarChar(100)
+  promptVarName   String             @map("prompt_var_name") @db.VarChar(100)
+  description     String?            @db.VarChar(200)
+  displayOrder    Int?               @default(0) @map("display_order")
+  aiServiceConfig ai_service_configs @relation(fields: [serviceType], references: [service_type], onDelete: NoAction, onUpdate: NoAction, map: "fk_service_type")
+
+  @@unique([serviceType, internalKey], map: "uq_service_internal_key")
+  @@index([serviceType], map: "idx_config_vars_service")
+  @@map("ai_config_variables")
+}
+
+model TokenUsage {
+  id                   Int              @id @default(autoincrement())
+  userId               Int              @map("user_id")
+  serviceType          String           @map("service_type") @db.VarChar(20)
+  requestId            Int?             @map("request_id")
+  caseId               Int?             @map("case_id")
+  inputTokens          Int?             @default(0) @map("input_tokens")
+  outputTokens         Int?             @default(0) @map("output_tokens")
+  totalTokens          Int?             @default(0) @map("total_tokens")
+  aiModel              String?          @map("ai_model") @db.VarChar(80)
+  aiProvider           String?          @default("openai") @map("ai_provider") @db.VarChar(60)
+  estimatedCost        Decimal?         @default(0) @map("estimated_cost") @db.Decimal(10, 6)
+  audioDurationSeconds Decimal?         @map("audio_duration_seconds") @db.Decimal(10, 2)
+  callType             String?          @default("primary") @map("call_type") @db.VarChar(20)
+  createdAt            DateTime?        @default(now()) @map("created_at") @db.Timestamptz(6)
+  case                 Case?            @relation(fields: [caseId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  analysisRequest      AnalysisRequest? @relation(fields: [requestId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user                 User             @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([caseId], map: "idx_token_usage_case")
+  @@index([createdAt], map: "idx_token_usage_date")
+  @@index([serviceType], map: "idx_token_usage_service")
+  @@index([userId], map: "idx_token_usage_user")
+  @@map("token_usage")
+}

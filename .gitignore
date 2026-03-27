@@ -1,0 +1,45 @@
+# Dependencies
+node_modules/
+
+# ==============================================================================
+# Variables de entorno
+# ==============================================================================
+# ⚠️ NUNCA subir archivos .env con credenciales reales
+# Los archivos .env.example y .env.railway.example SÍ se suben (son plantillas)
+.env
+.env.local
+.env.*.local
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Prisma
+prisma/migrations/*.sql.backup
+
+# Uploads (archivos subidos por usuarios)
+uploads/*
+!uploads/.gitkeep
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Build
+dist/
+build/
+
+# Coverage
+coverage/
+
+# Temp files
+*.tmp
+*.temp
+.cache/
