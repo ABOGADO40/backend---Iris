@@ -83,6 +83,8 @@ async function configureCORS(bucketName) {
       CORSRules: [
         {
           AllowedOrigins: [
+            'https://irisforense.com',
+            'https://www.irisforense.com',
             'https://iris-frontend-production-89be.up.railway.app',
             'http://localhost:5173',
             'http://localhost:3000',

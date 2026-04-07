@@ -143,10 +143,10 @@ const AI_SERVICE_CONFIGS_DATA = [
     ai_model: 'gpt-4o',
     max_tokens: 16384,
     temperature: 0.7,
-    is_active: true,
-    prompt_id: 'pmpt_69a5eee4c0688190b305108ea5cf25bb0a2bea9b24277bc9',
+    is_active: false,
+    prompt_id: null,
     prompt_version: null,
-    use_responses_api: true
+    use_responses_api: false
   },
   {
     service_type: 'RECOMMEND',
@@ -156,10 +156,10 @@ const AI_SERVICE_CONFIGS_DATA = [
     ai_model: 'gpt-4o',
     max_tokens: 16384,
     temperature: 0.7,
-    is_active: true,
-    prompt_id: 'pmpt_69a71bb050d8819480069b28d7dd24cb02f4ab620a885930',
+    is_active: false,
+    prompt_id: null,
     prompt_version: null,
-    use_responses_api: true
+    use_responses_api: false
   },
   {
     service_type: 'COMPARE',
@@ -169,10 +169,10 @@ const AI_SERVICE_CONFIGS_DATA = [
     ai_model: 'gpt-4o',
     max_tokens: 16384,
     temperature: 0.7,
-    is_active: true,
-    prompt_id: 'pmpt_69a5468e736c8193b7294755d2b5326e0a40b03fa0d02cbc',
+    is_active: false,
+    prompt_id: null,
     prompt_version: null,
-    use_responses_api: true
+    use_responses_api: false
   },
   {
     service_type: 'OBJECTIONS',
@@ -182,10 +182,10 @@ const AI_SERVICE_CONFIGS_DATA = [
     ai_model: 'gpt-4o',
     max_tokens: 16384,
     temperature: 0.7,
-    is_active: true,
-    prompt_id: 'pmpt_69a131cda24481959b8d59673ff6e71200fbe1d6ea571beb',
+    is_active: false,
+    prompt_id: null,
     prompt_version: null,
-    use_responses_api: true
+    use_responses_api: false
   },
   {
     service_type: 'TRANSCRIBE',
