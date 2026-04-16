@@ -43,16 +43,8 @@ const ROLES_DATA = [
     description: 'Administrador del sistema con acceso total a todas las funcionalidades'
   },
   {
-    name: 'ADMIN',
-    description: 'Administrador con gestion de usuarios y auditoria, sin configuracion de sistema'
-  },
-  {
-    name: 'PERITO',
-    description: 'Perito con acceso completo a casos, evidencias, analisis IA y exportaciones'
-  },
-  {
-    name: 'ASISTENTE',
-    description: 'Asistente con acceso basico a casos y evidencias, sin ejecucion de analisis IA'
+    name: 'USER',
+    description: 'Usuario estandar con acceso a sus propios datos y funcionalidades basicas'
   }
 ];
 
@@ -88,8 +80,9 @@ const PERMISSIONS_DATA = [
 // ─────────────────────────────────────────────────────
 // 1.3 PERMISOS POR ROL
 // SUPER_ADMIN: todos los permisos (asignados dinamicamente)
+// USER: permisos operativos (casos, evidencias, analisis, tags, exports, historial)
 // ─────────────────────────────────────────────────────
-const ADMIN_PERMISSION_CODES = [
+const USER_PERMISSION_CODES = [
   'CASES_READ',
   'CASES_CREATE',
   'CASES_UPDATE',
@@ -99,35 +92,6 @@ const ADMIN_PERMISSION_CODES = [
   'ANALYSIS_READ',
   'TAGS_MANAGE',
   'EXPORTS_CREATE',
-  'HISTORY_READ',
-  'USERS_READ',
-  'USERS_CREATE',
-  'USERS_UPDATE',
-  'AUDIT_READ',
-  'AUDIT_EXPORT'
-];
-
-const PERITO_PERMISSION_CODES = [
-  'CASES_READ',
-  'CASES_CREATE',
-  'CASES_UPDATE',
-  'EVIDENCES_READ',
-  'EVIDENCES_CREATE',
-  'ANALYSIS_EXECUTE',
-  'ANALYSIS_READ',
-  'TAGS_MANAGE',
-  'EXPORTS_CREATE',
-  'HISTORY_READ'
-];
-
-const ASISTENTE_PERMISSION_CODES = [
-  'CASES_READ',
-  'CASES_CREATE',
-  'CASES_UPDATE',
-  'EVIDENCES_READ',
-  'EVIDENCES_CREATE',
-  'ANALYSIS_READ',
-  'TAGS_MANAGE',
   'HISTORY_READ'
 ];
 
@@ -358,17 +322,9 @@ async function main() {
   const superAdminCount = await assignPermissions('SUPER_ADMIN', allPermCodes);
   console.log(`   ✓ SUPER_ADMIN: ${superAdminCount} permisos (todos)`);
 
-  // ADMIN: gestion de usuarios y auditoria, sin config de sistema
-  const adminCount = await assignPermissions('ADMIN', ADMIN_PERMISSION_CODES);
-  console.log(`   ✓ ADMIN: ${adminCount} permisos (gestion + auditoria)`);
-
-  // PERITO: acceso operativo completo
-  const peritoCount = await assignPermissions('PERITO', PERITO_PERMISSION_CODES);
-  console.log(`   ✓ PERITO: ${peritoCount} permisos (operativo completo)`);
-
-  // ASISTENTE: acceso basico sin ejecucion de IA ni exportaciones
-  const asistenteCount = await assignPermissions('ASISTENTE', ASISTENTE_PERMISSION_CODES);
-  console.log(`   ✓ ASISTENTE: ${asistenteCount} permisos (basico)`);
+  // USER: permisos operativos (sin administracion ni config de sistema)
+  const userCount = await assignPermissions('USER', USER_PERMISSION_CODES);
+  console.log(`   ✓ USER: ${userCount} permisos (operativos)`);
 
   // ─────────────────────────────────────────────────────
   // 4. CREAR CONFIGURACION DE SERVICIOS IA
@@ -502,9 +458,7 @@ async function main() {
 │  PERMISOS POR ROL                                        │
 ├──────────────────────────────────────────────────────────┤
 │  SUPER_ADMIN:        ${String(superAdminCount + ' (todos)').padEnd(34)}│
-│  ADMIN:              ${String(adminCount + ' (gestion + auditoria)').padEnd(34)}│
-│  PERITO:             ${String(peritoCount + ' (operativo completo)').padEnd(34)}│
-│  ASISTENTE:          ${String(asistenteCount + ' (basico)').padEnd(34)}│
+│  USER:               ${String(userCount + ' (operativos)').padEnd(34)}│
 ├──────────────────────────────────────────────────────────┤
 │  SERVICIOS IA                                            │
 ├──────────────────────────────────────────────────────────┤

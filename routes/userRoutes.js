@@ -79,6 +79,13 @@ router.get('/:id', userIdValidation, userController.getById);
  */
 router.put('/:id', updateUserValidation, userController.update);
 
+/**
+ * @route   DELETE /api/users/:id
+ * @desc    Eliminar un usuario (eliminacion logica)
+ * @access  SUPER_ADMIN only
+ */
+router.delete('/:id', userIdValidation, userController.delete);
+
 // =====================================================
 // RUTAS DE ACCIONES ESPECIALES
 // =====================================================
@@ -103,6 +110,13 @@ router.post('/:id/activate', userIdValidation, userController.activate);
  * @access  SUPER_ADMIN only
  */
 router.post('/:id/verify-email', userIdValidation, emailVerificationController.adminVerifyEmail);
+
+/**
+ * @route   POST /api/users/:id/reset-password
+ * @desc    Resetear password de un usuario (genera password temporal)
+ * @access  SUPER_ADMIN only
+ */
+router.post('/:id/reset-password', userIdValidation, userController.resetPassword);
 
 /**
  * @route   POST /api/users/:id/revoke-sessions

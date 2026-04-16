@@ -5,9 +5,9 @@
 const crypto = require('crypto');
 const prisma = require('../config/prisma');
 
-const PIN_EXPIRATION_MINUTES = 15;
-const MAX_ATTEMPTS = 5;
-const RESEND_COOLDOWN_SECONDS = 60;
+const PIN_EXPIRATION_MINUTES = parseInt(process.env.PIN_EXPIRATION_MINUTES || '15', 10);
+const MAX_ATTEMPTS = parseInt(process.env.PIN_MAX_ATTEMPTS || '5', 10);
+const RESEND_COOLDOWN_SECONDS = parseInt(process.env.PIN_COOLDOWN_SECONDS || '60', 10);
 
 const emailVerificationModel = {
   /**
@@ -135,3 +135,4 @@ const emailVerificationModel = {
 };
 
 module.exports = emailVerificationModel;
+module.exports.PIN_EXPIRATION_MINUTES = PIN_EXPIRATION_MINUTES;

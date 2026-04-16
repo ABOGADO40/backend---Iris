@@ -8,6 +8,7 @@ const crypto = require('crypto');
 const authModel = require('../models/authModel');
 const auditService = require('../services/auditService');
 const emailVerificationModel = require('../models/emailVerificationModel');
+const { PIN_EXPIRATION_MINUTES } = require('../models/emailVerificationModel');
 const emailService = require('../services/emailService');
 const emailTemplates = require('../services/emailTemplates');
 const { AUDIT_ACTIONS, ENTITY_TYPES, ERROR_MESSAGES } = require('../utils/constants');
@@ -143,23 +144,33 @@ async function login(req, res) {
     );
 
     // Responder con token y datos del usuario
+    const responseData = {
+      token,
+      expiresAt: expiresAt.toISOString(),
+      user: {
+        id: user.id,
+        email: user.email,
+        fullName: user.fullName,
+        role: {
+          id: user.role.id,
+          name: user.role.name,
+          description: user.role.description,
+        },
+      },
+      permissions,
+    };
+
+    if (user.mustChangePassword) {
+      return res.status(200).json({
+        success: true,
+        data: responseData,
+        code: 'MUST_CHANGE_PASSWORD',
+      });
+    }
+
     return res.status(200).json({
       success: true,
-      data: {
-        token,
-        expiresAt: expiresAt.toISOString(),
-        user: {
-          id: user.id,
-          email: user.email,
-          fullName: user.fullName,
-          role: {
-            id: user.role.id,
-            name: user.role.name,
-            description: user.role.description,
-          },
-        },
-        permissions,
-      },
+      data: responseData,
     });
   } catch (error) {
     console.error('[AuthController] Error en login:', error.message);
@@ -248,7 +259,7 @@ async function register(req, res) {
     // Generar PIN de verificacion y enviar email
     try {
       const pin = await emailVerificationModel.createPin(user.id);
-      const { subject, html } = emailTemplates.verificationPinEmail(pin, user.fullName);
+      const { subject, html } = emailTemplates.verificationPinEmail(pin, user.fullName, PIN_EXPIRATION_MINUTES);
       await emailService.sendEmail({ to: user.email, subject, html });
 
       // Siempre imprimir en consola para desarrollo
@@ -359,9 +370,62 @@ async function logout(req, res) {
   }
 }
 
+/**
+ * Cambiar password (obligatorio despues de reset)
+ * POST /api/auth/change-password
+ */
+async function changePassword(req, res) {
+  try {
+    const { newPassword } = req.body;
+
+    if (!newPassword || newPassword.length < 8) {
+      return res.status(400).json({
+        success: false,
+        error: 'La nueva contrasena debe tener al menos 8 caracteres.',
+        code: 'WEAK_PASSWORD',
+      });
+    }
+
+    const prisma = require('../config/prisma');
+    const bcrypt = require('bcrypt');
+
+    const passwordHash = await bcrypt.hash(newPassword, 12);
+
+    await prisma.user.update({
+      where: { id: req.user.id },
+      data: {
+        passwordHash,
+        mustChangePassword: false,
+        dateTimeModification: new Date(),
+      },
+    });
+
+    await auditService.logAction(
+      req.user.id,
+      AUDIT_ACTIONS.USER_PASSWORD_CHANGED,
+      ENTITY_TYPES.USER,
+      req.user.id,
+      { method: 'forced_change' },
+      req
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: 'Contrasena actualizada exitosamente.',
+    });
+  } catch (error) {
+    console.error('[AuthController] Error en changePassword:', error.message);
+    return res.status(500).json({
+      success: false,
+      error: ERROR_MESSAGES.INTERNAL_ERROR,
+    });
+  }
+}
+
 module.exports = {
   login,
   register,
   me,
   logout,
+  changePassword,
 };

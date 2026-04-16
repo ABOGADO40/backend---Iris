@@ -30,8 +30,8 @@ const userModel = {
     const skip = (page - 1) * limit;
     const take = Math.min(parseInt(limit, 10), 100);
 
-    // Construir condiciones de busqueda
-    const where = {};
+    // Construir condiciones de busqueda (siempre excluir eliminados)
+    const where = { deletedAt: null };
 
     if (search) {
       where.OR = [
@@ -107,8 +107,8 @@ const userModel = {
    * @returns {Promise<Object>} - Usuario encontrado
    */
   async getUserById(id) {
-    const user = await prisma.user.findUnique({
-      where: { id: parseInt(id, 10) },
+    const user = await prisma.user.findFirst({
+      where: { id: parseInt(id, 10), deletedAt: null },
       select: {
         id: true,
         email: true,
@@ -182,9 +182,9 @@ const userModel = {
   async createUser(data, creatorId) {
     const { email, password, fullName, roleId, isActive = true } = data;
 
-    // Verificar que el email no existe
-    const existing = await prisma.user.findUnique({
-      where: { email: email.toLowerCase().trim() },
+    // Verificar que el email no existe entre usuarios activos (no eliminados)
+    const existing = await prisma.user.findFirst({
+      where: { email: email.toLowerCase().trim(), deletedAt: null },
     });
 
     if (existing) {
@@ -244,19 +244,23 @@ const userModel = {
     const userId = parseInt(id, 10);
     const { email, password, fullName, roleId, isActive } = data;
 
-    // Verificar que el usuario existe
-    const existing = await prisma.user.findUnique({
-      where: { id: userId },
+    // Verificar que el usuario existe y no esta eliminado
+    const existing = await prisma.user.findFirst({
+      where: { id: userId, deletedAt: null },
     });
 
     if (!existing) {
       throw new AppError('Usuario no encontrado', 404, 'USER_NOT_FOUND');
     }
 
-    // Si se cambia el email, verificar que no exista
+    // Si se cambia el email, verificar que no exista entre usuarios activos (no eliminados)
     if (email && email.toLowerCase().trim() !== existing.email) {
-      const emailExists = await prisma.user.findUnique({
-        where: { email: email.toLowerCase().trim() },
+      const emailExists = await prisma.user.findFirst({
+        where: {
+          email: email.toLowerCase().trim(),
+          deletedAt: null,
+          id: { not: userId },
+        },
       });
 
       if (emailExists) {
@@ -334,8 +338,8 @@ const userModel = {
   async deactivateUser(id, modifierId) {
     const userId = parseInt(id, 10);
 
-    const existing = await prisma.user.findUnique({
-      where: { id: userId },
+    const existing = await prisma.user.findFirst({
+      where: { id: userId, deletedAt: null },
     });
 
     if (!existing) {
@@ -372,8 +376,8 @@ const userModel = {
   async activateUser(id, modifierId) {
     const userId = parseInt(id, 10);
 
-    const existing = await prisma.user.findUnique({
-      where: { id: userId },
+    const existing = await prisma.user.findFirst({
+      where: { id: userId, deletedAt: null },
     });
 
     if (!existing) {
@@ -394,6 +398,60 @@ const userModel = {
         isActive: true,
       },
     });
+  },
+
+  /**
+   * Eliminar un usuario (eliminacion logica)
+   * Marca como eliminado, desactiva y libera el email para reutilizacion
+   * @param {number} id - ID del usuario
+   * @param {number} modifierId - ID del usuario que elimina
+   * @returns {Promise<Object>} - Usuario eliminado
+   */
+  async deleteUser(id, modifierId) {
+    const userId = parseInt(id, 10);
+
+    const existing = await prisma.user.findFirst({
+      where: { id: userId, deletedAt: null },
+    });
+
+    if (!existing) {
+      throw new AppError('Usuario no encontrado', 404, 'USER_NOT_FOUND');
+    }
+
+    // No permitir eliminarse a si mismo
+    if (userId === modifierId) {
+      throw new AppError('No puede eliminar su propia cuenta', 400, 'CANNOT_SELF_DELETE');
+    }
+
+    const now = new Date();
+
+    // Mutar email para liberar el constraint UNIQUE y permitir reutilizacion
+    const deletedEmail = `${existing.email}__deleted_${userId}`;
+
+    // Ejecutar eliminacion logica y revocacion de sesiones en transaccion
+    const [user] = await prisma.$transaction([
+      prisma.user.update({
+        where: { id: userId },
+        data: {
+          isActive: false,
+          deletedAt: now,
+          email: deletedEmail,
+          userIdModification: modifierId,
+          dateTimeModification: now,
+        },
+        select: {
+          id: true,
+          fullName: true,
+          isActive: true,
+        },
+      }),
+      prisma.session.updateMany({
+        where: { userId, revokedAt: null },
+        data: { revokedAt: now, userIdModification: modifierId, dateTimeModification: now },
+      }),
+    ]);
+
+    return { ...user, email: existing.email };
   },
 
   /**
@@ -423,11 +481,12 @@ const userModel = {
    */
   async getUserStats() {
     const [total, active, inactive, byRole] = await Promise.all([
-      prisma.user.count(),
-      prisma.user.count({ where: { isActive: true } }),
-      prisma.user.count({ where: { isActive: false } }),
+      prisma.user.count({ where: { deletedAt: null } }),
+      prisma.user.count({ where: { isActive: true, deletedAt: null } }),
+      prisma.user.count({ where: { isActive: false, deletedAt: null } }),
       prisma.user.groupBy({
         by: ['roleId'],
+        where: { deletedAt: null },
         _count: { id: true },
       }),
     ]);
@@ -493,6 +552,46 @@ const userModel = {
         expiresAt: true,
       },
       orderBy: { dateTimeRegistration: 'desc' },
+    });
+  },
+  /**
+   * Resetear password de un usuario y marcar cambio obligatorio
+   * @param {number} userId - ID del usuario
+   * @param {string} newPasswordHash - Hash de la nueva password
+   * @param {number} modifierId - ID del admin que resetea
+   * @returns {Promise<object>} - Usuario actualizado
+   */
+  async resetPassword(userId, newPasswordHash, modifierId) {
+    const user = await prisma.user.findUnique({
+      where: { id: parseInt(userId, 10) },
+    });
+
+    if (!user) {
+      throw new AppError('Usuario no encontrado', 404, 'USER_NOT_FOUND');
+    }
+
+    if (!user.isActive) {
+      throw new AppError('No se puede resetear la password de un usuario inactivo', 400, 'USER_INACTIVE');
+    }
+
+    return prisma.$transaction(async (tx) => {
+      const updated = await tx.user.update({
+        where: { id: parseInt(userId, 10) },
+        data: {
+          passwordHash: newPasswordHash,
+          mustChangePassword: true,
+          userIdModification: modifierId,
+          dateTimeModification: new Date(),
+        },
+        select: { id: true, email: true, fullName: true },
+      });
+
+      await tx.session.updateMany({
+        where: { userId: parseInt(userId, 10), revokedAt: null },
+        data: { revokedAt: new Date() },
+      });
+
+      return updated;
     });
   },
 };

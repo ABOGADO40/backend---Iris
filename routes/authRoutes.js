@@ -48,6 +48,13 @@ router.post('/resend-pin', emailVerificationController.resendPin);
 router.get('/me', authController.me);
 
 /**
+ * @route   POST /api/auth/change-password
+ * @desc    Cambiar password (obligatorio despues de reset por admin)
+ * @access  Private (verificado por globalAuthGuard)
+ */
+router.post('/change-password', authController.changePassword);
+
+/**
  * @route   POST /api/auth/logout
  * @desc    Cerrar sesion actual
  * @access  Private (verificado por globalAuthGuard)

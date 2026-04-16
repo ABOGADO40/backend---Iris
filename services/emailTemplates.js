@@ -2,14 +2,18 @@
 // SISTEMA IRIS - Templates de Email
 // =====================================================
 
+const APP_NAME = process.env.APP_NAME || 'Sistema IRIS';
+const APP_DESCRIPTION = process.env.APP_DESCRIPTION || 'Plataforma de Gestion Legal';
+
 /**
  * Template para el email de verificacion con PIN
  * @param {string} pin - Codigo de 6 digitos
  * @param {string} fullName - Nombre del usuario
+ * @param {number} expirationMinutes - Minutos de validez del PIN
  * @returns {Object} { subject, html }
  */
-function verificationPinEmail(pin, fullName) {
-  const subject = `${pin} - Codigo de verificacion | Sistema IRIS`;
+function verificationPinEmail(pin, fullName, expirationMinutes) {
+  const subject = `Codigo de verificacion | ${APP_NAME}`;
 
   const html = `
 <!DOCTYPE html>
@@ -26,7 +30,7 @@ function verificationPinEmail(pin, fullName) {
           <!-- Header -->
           <tr>
             <td style="background-color:#1e3a5f;padding:28px 32px;text-align:center;">
-              <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:700;letter-spacing:0.5px;">Sistema IRIS</h1>
+              <h1 style="margin:0;color:#ffffff;font-size:22px;font-weight:700;letter-spacing:0.5px;">${APP_NAME}</h1>
             </td>
           </tr>
           <!-- Body -->
@@ -48,7 +52,7 @@ function verificationPinEmail(pin, fullName) {
                 Ingresa este codigo en la pagina de verificacion para activar tu cuenta.
               </p>
               <p style="margin:0 0 0;color:#999999;font-size:13px;line-height:1.5;">
-                Este codigo expira en <strong>15 minutos</strong>. Si no solicitaste esta verificacion, puedes ignorar este correo.
+                Este codigo expira en <strong>${expirationMinutes} minutos</strong>. Si no solicitaste esta verificacion, puedes ignorar este correo.
               </p>
             </td>
           </tr>
@@ -56,7 +60,7 @@ function verificationPinEmail(pin, fullName) {
           <tr>
             <td style="background-color:#f8f9fa;padding:20px 32px;text-align:center;border-top:1px solid #e9ecef;">
               <p style="margin:0;color:#999999;font-size:12px;">
-                Sistema IRIS - Plataforma de Gestion Legal
+                ${APP_NAME} - ${APP_DESCRIPTION}
               </p>
             </td>
           </tr>

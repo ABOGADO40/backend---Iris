@@ -4,6 +4,7 @@
 
 const prisma = require('../config/prisma');
 const emailVerificationModel = require('../models/emailVerificationModel');
+const { PIN_EXPIRATION_MINUTES } = require('../models/emailVerificationModel');
 const emailService = require('../services/emailService');
 const emailTemplates = require('../services/emailTemplates');
 const auditService = require('../services/auditService');
@@ -129,7 +130,7 @@ async function resendPin(req, res) {
     const pin = await emailVerificationModel.createPin(user.id);
 
     // Enviar email
-    const { subject, html } = emailTemplates.verificationPinEmail(pin, user.fullName);
+    const { subject, html } = emailTemplates.verificationPinEmail(pin, user.fullName, PIN_EXPIRATION_MINUTES);
     const sent = await emailService.sendEmail({ to: user.email, subject, html });
 
     // Siempre imprimir en consola para desarrollo

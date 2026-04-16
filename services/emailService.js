@@ -1,38 +1,26 @@
 // =====================================================
 // SISTEMA IRIS - Servicio de Email
-// Envio de correos via SMTP (Gmail)
+// Envio de correos via Resend API (HTTPS)
 // =====================================================
 
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 
-// Crear transporter con configuracion de variables de entorno
-let transporter = null;
+let resendClient = null;
 
-function getTransporter() {
-  if (!transporter) {
-    const host = process.env.SMTP_HOST;
-    const port = parseInt(process.env.SMTP_PORT || '587', 10);
-    const secure = process.env.SMTP_SECURE === 'true';
-    const user = process.env.SMTP_USER;
-    const pass = process.env.SMTP_PASS;
-
-    if (!host || !user || !pass) {
-      console.warn('[EmailService] SMTP no configurado. Los emails se mostraran solo en consola.');
+function getClient() {
+  if (!resendClient) {
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) {
+      console.warn('[EmailService] RESEND_API_KEY no configurada. Los emails se mostraran solo en consola.');
       return null;
     }
-
-    transporter = nodemailer.createTransport({
-      host,
-      port,
-      secure,
-      auth: { user, pass },
-    });
+    resendClient = new Resend(apiKey);
   }
-  return transporter;
+  return resendClient;
 }
 
 /**
- * Envia un email
+ * Envia un email via Resend API
  * @param {Object} options
  * @param {string} options.to - Destinatario
  * @param {string} options.subject - Asunto
@@ -40,18 +28,34 @@ function getTransporter() {
  * @returns {Promise<boolean>} true si se envio, false si fallo
  */
 async function sendEmail({ to, subject, html }) {
-  const from = process.env.EMAIL_FROM || process.env.SMTP_USER;
+  const from = process.env.RESEND_FROM;
 
   try {
-    const transport = getTransporter();
+    const client = getClient();
 
-    if (!transport) {
-      console.log(`[EmailService] SMTP no disponible. Email para ${to}:`);
+    if (!client) {
+      console.log(`[EmailService] Resend no disponible. Email para ${to}:`);
       console.log(`  Asunto: ${subject}`);
       return false;
     }
 
-    await transport.sendMail({ from, to, subject, html });
+    if (!from) {
+      console.error('[EmailService] RESEND_FROM no configurada.');
+      return false;
+    }
+
+    const { error } = await client.emails.send({
+      from,
+      to: [to],
+      subject,
+      html,
+    });
+
+    if (error) {
+      console.error(`[EmailService] Error enviando email a ${to}:`, error.message);
+      return false;
+    }
+
     console.log(`[EmailService] Email enviado a ${to}`);
     return true;
   } catch (error) {

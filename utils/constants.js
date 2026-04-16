@@ -89,6 +89,9 @@ const AUDIT_ACTIONS = {
   USER_CREATE: 'USER_CREATE',
   USER_UPDATE: 'USER_UPDATE',
   USER_DEACTIVATE: 'USER_DEACTIVATE',
+  USER_DELETE: 'USER_DELETE',
+  USER_PASSWORD_RESET: 'USER_PASSWORD_RESET',
+  USER_PASSWORD_CHANGED: 'USER_PASSWORD_CHANGED',
 
   // Verificacion de email
   EMAIL_VERIFICATION_SENT: 'EMAIL_VERIFICATION_SENT',
@@ -167,6 +170,7 @@ const ERROR_MESSAGES = {
   INVALID_CREDENTIALS: 'Credenciales invalidas.',
   USER_EXISTS: 'El usuario ya existe con este email.',
   USER_INACTIVE: 'La cuenta de usuario esta inactiva.',
+  USER_DELETED: 'La cuenta de usuario ha sido eliminada.',
   EMAIL_NOT_VERIFIED: 'Debes verificar tu correo electronico antes de iniciar sesion.',
 };
 
